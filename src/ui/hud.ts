@@ -1,0 +1,125 @@
+import { type EditorStore, type Overlay, PLAYBACK_RATES, TOOLS, formatTime } from '../state/editor';
+import { PX_PER_FOOT } from '../sim/mower';
+import type { JobResult } from '../sim/score';
+
+const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`missing #${id}`);
+  return el as T;
+};
+
+const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+
+function damageSummary(r: JobResult): string {
+  if (r.damage.length === 0) return 'None';
+  const counts = new Map<string, number>();
+  for (const d of r.damage) counts.set(d.kind, (counts.get(d.kind) ?? 0) + 1);
+  return [...counts].map(([k, n]) => `${k} ×${n}`).join(', ');
+}
+
+/** Binds the DOM toolbar/side panel/results modal to the editor store. */
+export function mountHud(store: EditorStore): void {
+  const toolsEl = $('tools');
+  const toolButtons = TOOLS.map((t) => {
+    const b = document.createElement('button');
+    b.innerHTML = `${t.label}<kbd>${t.key}</kbd>`;
+    b.title = t.hint;
+    b.onclick = () => store.set({ tool: t.id });
+    toolsEl.appendChild(b);
+    return b;
+  });
+
+  const speedsEl = $('speeds');
+  const speedButtons = PLAYBACK_RATES.map((_, i) => {
+    const b = document.createElement('button');
+    b.textContent = `${2 ** i}x`;
+    b.onclick = () => store.set({ playback: i });
+    speedsEl.appendChild(b);
+    return b;
+  });
+
+  $('undo').onclick = () => store.command('undo');
+  $('redo').onclick = () => store.command('redo');
+  $('clear').onclick = () => store.command('clear');
+  $('mow').onclick = () => store.command('mow');
+  $('stop').onclick = () => store.command('stop');
+  $('res-edit').onclick = () => store.command('edit');
+  $('res-again').onclick = () => store.command('mow');
+  const snapEl = $<HTMLInputElement>('snap');
+  snapEl.onchange = () => store.set({ snap: snapEl.checked });
+
+  // "Look at lawn" hides the modal so the player can inspect the yard with overlays.
+  let modalHidden = false;
+  $('res-hide').onclick = () => {
+    modalHidden = true;
+    render();
+  };
+  $('show-results').onclick = () => {
+    modalHidden = false;
+    render();
+  };
+  const overlayButtons = [...$('overlays').querySelectorAll<HTMLButtonElement>('button')];
+  for (const b of overlayButtons) {
+    b.onclick = () => store.set({ overlay: b.dataset.overlay as Overlay });
+  }
+
+  let lastMode = store.state.mode;
+  const render = () => {
+    const s = store.state;
+    if (s.mode !== lastMode) {
+      modalHidden = false;
+      lastMode = s.mode;
+    }
+    const editing = s.mode === 'edit';
+    $('yard-name').textContent = s.yardName;
+    $('mower-name').textContent = s.mowerName;
+
+    TOOLS.forEach((t, i) => {
+      toolButtons[i].classList.toggle('active', t.id === s.tool);
+      toolButtons[i].disabled = !editing;
+    });
+    $<HTMLButtonElement>('undo').disabled = !editing || !s.canUndo;
+    $<HTMLButtonElement>('redo').disabled = !editing || !s.canRedo;
+    $<HTMLButtonElement>('clear').disabled = !editing || s.segments === 0;
+    $<HTMLButtonElement>('mow').disabled = s.mode === 'mowing' || s.segments === 0;
+    snapEl.checked = s.snap;
+
+    $('hint').textContent = editing
+      ? TOOLS.find((t) => t.id === s.tool)!.hint
+      : s.mode === 'mowing'
+        ? 'Watch the mower follow your route.'
+        : 'Check the missed spots and overlap heatmap, then tweak your route.';
+
+    const e = s.estimate;
+    $('est-time').textContent = e ? formatTime(e.time) : '–';
+    $('est-coverage').textContent = e ? pct(e.coverage) : '–';
+    $('est-turn').textContent = e ? formatTime(e.turnTime) : '–';
+    $('est-overlap').textContent = e ? pct(e.overlap) : '–';
+    $('est-distance').textContent = e ? `${Math.round(e.distance / PX_PER_FOOT)} ft` : '–';
+    $('est-warn').textContent =
+      e && e.damage.length ? `⚠ Route runs into: ${damageSummary(e)}` : '';
+
+    $('playback').classList.toggle('hidden', s.mode !== 'mowing');
+    speedButtons.forEach((b, i) => b.classList.toggle('active', i === s.playback));
+    if (s.live) {
+      $('live-time').textContent = formatTime(s.live.time);
+      $('live-coverage').textContent = pct(s.live.coverage);
+    }
+
+    const r = s.result;
+    const showResults = s.mode === 'results' && r;
+    $('results').classList.toggle('hidden', !showResults || modalHidden);
+    $('show-results').classList.toggle('hidden', !showResults || !modalHidden);
+    if (r) {
+      $('stars').textContent = '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars);
+      $('res-coverage').textContent = `${pct(r.coverage)} (${r.missedCells} cells missed)`;
+      $('res-time').textContent = `${formatTime(r.time)} (${formatTime(r.turnTime)} turning)`;
+      $('res-eff').textContent = pct(r.efficiency);
+      $('res-overlap').textContent = pct(r.overlap);
+      $('res-damage').textContent = damageSummary(r);
+      $('res-sat').textContent = `${Math.round(r.satisfaction)} / 100`;
+    }
+    overlayButtons.forEach((b) => b.classList.toggle('active', b.dataset.overlay === s.overlay));
+  };
+  store.subscribe(render);
+}

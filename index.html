@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lawn Pro</title>
+  </head>
+  <body>
+    <div id="app">
+      <header id="toolbar">
+        <h1>Lawn Pro</h1>
+        <div class="group" id="tools"></div>
+        <div class="group">
+          <button id="undo" title="Undo (Ctrl+Z)">Undo</button>
+          <button id="redo" title="Redo (Ctrl+Y)">Redo</button>
+          <button id="clear" title="Clear route">Clear</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="snap" checked /> Grid snap</label>
+        <button id="mow" class="primary" title="Start mowing (Enter)">Mow!</button>
+      </header>
+      <main>
+        <div id="game"></div>
+        <aside id="panel">
+          <section>
+            <h2 id="yard-name"></h2>
+            <p class="muted" id="mower-name"></p>
+          </section>
+          <section id="hint-box">
+            <p id="hint"></p>
+            <p class="muted small">
+              Cyan dot = snapped to an edge (deck just touches it). Esc or right-click cancels.
+            </p>
+          </section>
+          <section id="estimate">
+            <h3>Route estimate</h3>
+            <dl>
+              <dt>Time</dt>
+              <dd id="est-time">–</dd>
+              <dt>Coverage</dt>
+              <dd id="est-coverage">–</dd>
+              <dt>Turning</dt>
+              <dd id="est-turn">–</dd>
+              <dt>Overlap</dt>
+              <dd id="est-overlap">–</dd>
+              <dt>Distance</dt>
+              <dd id="est-distance">–</dd>
+            </dl>
+            <p id="est-warn" class="warn"></p>
+          </section>
+          <section id="playback" class="hidden">
+            <h3>Mowing…</h3>
+            <dl>
+              <dt>Time</dt>
+              <dd id="live-time">0:00</dd>
+              <dt>Cut</dt>
+              <dd id="live-coverage">0%</dd>
+            </dl>
+            <div class="group" id="speeds"></div>
+            <button id="stop">Stop</button>
+          </section>
+        </aside>
+      </main>
+      <div id="results" class="modal hidden">
+        <div class="card">
+          <h2>Job complete</h2>
+          <div id="stars" class="stars"></div>
+          <dl>
+            <dt>Coverage</dt>
+            <dd id="res-coverage"></dd>
+            <dt>Time</dt>
+            <dd id="res-time"></dd>
+            <dt>Efficiency</dt>
+            <dd id="res-eff"></dd>
+            <dt>Overlap</dt>
+            <dd id="res-overlap"></dd>
+            <dt>Damage</dt>
+            <dd id="res-damage"></dd>
+            <dt>Customer satisfaction</dt>
+            <dd id="res-sat"></dd>
+          </dl>
+          <div class="group" id="overlays">
+            <button data-overlay="normal">Stripes</button>
+            <button data-overlay="missed">Missed spots</button>
+            <button data-overlay="heat">Overlap heatmap</button>
+          </div>
+          <div class="group">
+            <button id="res-edit">Edit route</button>
+            <button id="res-again" class="primary">Mow again</button>
+            <button id="res-hide">Look at lawn</button>
+          </div>
+        </div>
+      </div>
+      <button id="show-results" class="hidden floating">Show results</button>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
