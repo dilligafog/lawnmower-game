@@ -10,10 +10,22 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
 
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
+const HIT_LABELS: Record<string, string> = {
+  tree: 'tree',
+  bed: 'flower bed',
+  house: 'house',
+  rock: 'rock',
+  fence: 'edge of map',
+  neighbor: "neighbor's lawn",
+};
+
 function damageSummary(r: JobResult): string {
   if (r.damage.length === 0) return 'None';
   const counts = new Map<string, number>();
-  for (const d of r.damage) counts.set(d.kind, (counts.get(d.kind) ?? 0) + 1);
+  for (const d of r.damage) {
+    const label = HIT_LABELS[d.kind] ?? d.kind;
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
   return [...counts].map(([k, n]) => `${k} ×${n}`).join(', ');
 }
 
@@ -22,7 +34,7 @@ export function mountHud(store: EditorStore): void {
   const toolsEl = $('tools');
   const toolButtons = TOOLS.map((t) => {
     const b = document.createElement('button');
-    b.innerHTML = `${t.label}<kbd>${t.key}</kbd>`;
+    b.innerHTML = `${t.label}<kbd>${t.key.toUpperCase()}</kbd>`;
     b.title = t.hint;
     b.onclick = () => store.set({ tool: t.id });
     toolsEl.appendChild(b);

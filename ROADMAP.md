@@ -33,9 +33,15 @@ One hardcoded yard (your own yard), one mower, no economy.
 
 **Done when:** you can draw a route around a round tree and a V-shaped bed, watch it mow, and see a score that clearly rewards the better route. Playtest this heavily before moving on; it is the heart of the game.
 
+### Playtest round 1 (done)
+- Choose your own start point on any pavement (driveway, sidewalk, street; parking lots later).
+- More forgiving snapping: corner snap points, horizontal/vertical alignment with the last point, bigger radii, visible guides.
+- Contour tool replaced by **Edge**: freehand that sticks to edges and lets go when you pull away. Pinched spots (the inside of a V bed, lot corners) stay uncut on purpose; they're for the trimmer.
+- Surroundings: street, sidewalk, neighbors' lawns in a different shade, a dashed property line. Driving onto a neighbor's lawn counts as an incident.
+
 ## Phase 2 — Yard content & challenges
 - Yard data format: JSON, or Tiled map editor export. Fields: size, grass areas, obstacles, start point (driveway/gate), customer info.
-- Obstacle and challenge types: round trees, V-shaped and curved landscape beds (damage penalty), fences and narrow gates, slopes (slower), thick or wet grass patches (slower or a second pass needed), toys and hoses (must be avoided), flower beds (high satisfaction penalty), a dog in the yard (moving obstacle, later).
+- Obstacle and challenge types: round trees, V-shaped and curved landscape beds (damage penalty), fences and narrow gates (a mower can't get under a fence but grass still grows, so fence lines need edging), slopes (slower), thick or wet grass patches (slower or a second pass needed), toys and hoses (must be avoided), flower beds (high satisfaction penalty), a dog in the yard (moving obstacle, later).
 - Build 6–10 handcrafted yards that teach one challenge each, increasing in difficulty.
 
 **Done when:** yards load from data files and each challenge measurably affects score.
@@ -51,6 +57,7 @@ One hardcoded yard (your own yard), one mower, no economy.
 ## Phase 4 — Equipment upgrades
 Upgrades change the simulation itself, not just a number:
 - Deck width (fewer passes), engine (top speed), **zero-turn mower** (tight turning radius, which changes the best route shapes), bagger (satisfaction), string trimmer/edger (cleans edge cells near obstacles), mulching kit, fuel/battery capacity, trailer (travel time between jobs).
+- **Trimmer / edging pass:** after mowing, trim the cells the deck can't reach (along fences, in pinched corners like the inside of a V bed). Costs time, raises customer satisfaction. Score those "trim cells" separately from mowable coverage.
 - Shop UI with tiered upgrades.
 
 **Done when:** buying an upgrade visibly changes both how the mower behaves and which route is optimal.

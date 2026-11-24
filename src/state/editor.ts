@@ -1,16 +1,22 @@
 import type { JobResult } from '../sim/score';
 
-export type Tool = 'line' | 'curve' | 'freehand' | 'stripes' | 'contour';
+export type Tool = 'start' | 'line' | 'curve' | 'freehand' | 'stripes' | 'edge';
 export type Mode = 'edit' | 'mowing' | 'results';
 export type Overlay = 'normal' | 'missed' | 'heat';
 export type Command = 'undo' | 'redo' | 'clear' | 'mow' | 'stop' | 'edit';
 
 export const TOOLS: { id: Tool; label: string; key: string; hint: string }[] = [
   {
+    id: 'start',
+    label: 'Start',
+    key: 's',
+    hint: 'Pick where you unload the mower: click a driveway, sidewalk or street.',
+  },
+  {
     id: 'line',
     label: 'Straight',
     key: '1',
-    hint: 'Click to place a straight run. Hold Shift to lock angles to 15°.',
+    hint: 'Click to place a straight run. Snaps to corners, edges and your last point. Shift locks angles to 15°.',
   },
   {
     id: 'curve',
@@ -31,10 +37,10 @@ export const TOOLS: { id: Tool; label: string; key: string; hint: string }[] = [
     hint: 'Click to set the first pass, then move sideways to add stripes and click.',
   },
   {
-    id: 'contour',
-    label: 'Contour',
+    id: 'edge',
+    label: 'Edge',
     key: '5',
-    hint: 'Click a tree or bed to trim one lap around it.',
+    hint: 'Drag along a house, bed, tree or the property line. The path sticks to the edge until you pull away.',
   },
 ];
 

@@ -12,7 +12,7 @@ const mower = STARTER_MOWER;
 const store = new EditorStore({
   yardName: yard.name,
   mowerName: mower.name,
-  tool: 'stripes',
+  tool: 'line',
   snap: true,
   mode: 'edit',
   overlay: 'normal',

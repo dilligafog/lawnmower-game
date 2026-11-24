@@ -2,8 +2,10 @@ import Phaser from 'phaser';
 import type { Overlay } from '../state/editor';
 import type { MowSession } from '../sim/simulation';
 import {
+  CELL_ASPHALT,
   CELL_BED,
   CELL_GRASS,
+  CELL_NEIGHBOR,
   CELL_NONE,
   CELL_PAVEMENT,
   CELL_SOLID,
@@ -24,6 +26,9 @@ const STATIC: Record<number, RGB> = {
   [CELL_TREE]: [86, 70, 46],
   [CELL_SOLID]: [120, 120, 120],
   [CELL_PAVEMENT]: [176, 172, 162],
+  [CELL_ASPHALT]: [72, 74, 78],
+  // Neighbors' lawns: a duller, bluer green so the customer's lot stands out.
+  [CELL_NEIGHBOR]: [66, 98, 70],
 };
 
 /**
@@ -70,7 +75,7 @@ export class LawnRenderer {
     const type = this.yard.cells[idx];
     const passes = session ? session.passes[idx] : 0;
     // Tall grass is noisier than freshly cut grass.
-    const amp = type === CELL_GRASS && passes === 0 ? 26 : 10;
+    const amp = (type === CELL_GRASS && passes === 0) || type === CELL_NEIGHBOR ? 22 : 10;
     const n = this.noise[idx] * amp;
     const o = idx * 4;
     const d = this.image.data;

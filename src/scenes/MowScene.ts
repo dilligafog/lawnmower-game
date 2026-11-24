@@ -17,16 +17,22 @@ import {
 } from '../sim/route';
 import { scoreSession, simulateJob } from '../sim/score';
 import { MowSession } from '../sim/simulation';
-import { Snapper, type SnapResult, loopFrom, snapAngle } from '../sim/snap';
+import { DEFAULT_SNAP, Snapper, type SnapResult, snapAngle } from '../sim/snap';
 import { type Vec, dist, sub, norm } from '../sim/vec';
-import { type Obstacle, type Yard, buildYard, obstacleAt, type YardDef } from '../sim/yard';
+import { type Yard, buildYard, isValidStart, type YardDef } from '../sim/yard';
 
 const COLORS = {
   route: 0xffffff,
   preview: 0xf2c14e,
+  guide: 0xffffff,
   snapEdge: 0x4fd8ff,
+  snapCorner: 0x4fd8ff,
+  snapAxis: 0xb388ff,
   snapGrid: 0xffffff,
   snapPoint: 0xff9f43,
+  startOk: 0x4caf50,
+  startBad: 0xe53935,
+  property: 0xffffff,
   house: 0x8a5a44,
   roof: 0x6e4535,
   trunk: 0x5b3a1e,
@@ -46,7 +52,7 @@ interface SceneData {
 type Pending =
   | { tool: 'curve'; end: Vec }
   | { tool: 'stripes'; b: Vec }
-  | { tool: 'freehand'; stroke: Vec[] }
+  | { tool: 'freehand' | 'edge'; stroke: Vec[] }
   | null;
 
 export class MowScene extends Phaser.Scene {
@@ -57,13 +63,14 @@ export class MowScene extends Phaser.Scene {
   private lawn!: LawnRenderer;
 
   private route!: Route;
-  private past: Segment[][] = [];
-  private future: Segment[][] = [];
+  private past: Route[] = [];
+  private future: Route[] = [];
   private pending: Pending = null;
   private cursor: Vec = { x: 0, y: 0 };
   private snapped: SnapResult | null = null;
   private shift = false;
 
+  private guideGfx!: Phaser.GameObjects.Graphics;
   private swathGfx!: Phaser.GameObjects.Graphics;
   private swathRT!: Phaser.GameObjects.RenderTexture;
   private routeGfx!: Phaser.GameObjects.Graphics;
@@ -80,8 +87,8 @@ export class MowScene extends Phaser.Scene {
     this.yard = buildYard(data.yard);
     this.mower = data.mower;
     this.store = data.store;
-    this.snapper = new Snapper(this.yard, { grid: 8, deckWidth: this.mower.deckWidth, radius: 12 });
-    this.route = { start: data.yard.start, segments: this.loadRoute() };
+    this.snapper = new Snapper(this.yard, { ...DEFAULT_SNAP, deckWidth: this.mower.deckWidth });
+    this.route = this.loadRoute();
   }
 
   create(): void {
@@ -90,6 +97,8 @@ export class MowScene extends Phaser.Scene {
     this.lawn.drawAll(null);
     this.drawStaticYard(false);
 
+    this.guideGfx = this.add.graphics();
+    this.drawGuides();
     this.swathGfx = this.make.graphics({}, false);
     this.swathRT = this.add.renderTexture(0, 0, width, height).setOrigin(0).setAlpha(0.22);
     this.routeGfx = this.add.graphics();
@@ -109,7 +118,7 @@ export class MowScene extends Phaser.Scene {
     this.store.onCommand((c) => {
       if (c === 'undo') this.undo();
       else if (c === 'redo') this.redo();
-      else if (c === 'clear') this.commit([]);
+      else if (c === 'clear') this.commit({ ...this.route, segments: [] });
       else if (c === 'mow') this.startMowing();
       else if (c === 'stop' || c === 'edit') this.backToEdit();
     });
@@ -127,6 +136,8 @@ export class MowScene extends Phaser.Scene {
       }
     });
 
+    // A fresh yard starts by choosing where to unload the mower.
+    if (this.route.segments.length === 0) this.store.set({ tool: 'start' });
     this.routeChanged();
   }
 
@@ -140,22 +151,33 @@ export class MowScene extends Phaser.Scene {
     return this.store.state.mode === 'edit';
   }
 
-  private commit(segments: Segment[]): void {
-    this.past.push(this.route.segments);
+  private commit(route: Route): void {
+    this.past.push(this.route);
     this.future = [];
-    this.route = { ...this.route, segments };
+    this.route = route;
     this.routeChanged();
   }
 
   private addSegment(seg: Segment): void {
-    this.commit([...this.route.segments, seg]);
+    this.commit({ ...this.route, segments: [...this.route.segments, seg] });
+  }
+
+  /** Move the start point; the first segment is re-anchored so the route stays connected. */
+  private setStart(p: Vec): void {
+    const [first, ...rest] = this.route.segments;
+    let segments = this.route.segments;
+    if (first && (first.kind === 'spline' || first.kind === 'polyline')) {
+      segments = [{ ...first, points: [p, ...first.points.slice(1)] }, ...rest];
+    }
+    this.commit({ start: p, segments });
+    if (segments.length === 0) this.store.set({ tool: 'line' });
   }
 
   private undo(): void {
     const prev = this.past.pop();
     if (!prev) return;
-    this.future.push(this.route.segments);
-    this.route = { ...this.route, segments: prev };
+    this.future.push(this.route);
+    this.route = prev;
     this.pending = null;
     this.routeChanged();
   }
@@ -163,8 +185,8 @@ export class MowScene extends Phaser.Scene {
   private redo(): void {
     const next = this.future.pop();
     if (!next) return;
-    this.past.push(this.route.segments);
-    this.route = { ...this.route, segments: next };
+    this.past.push(this.route);
+    this.route = next;
     this.routeChanged();
   }
 
@@ -182,12 +204,13 @@ export class MowScene extends Phaser.Scene {
   }
 
   private snapPoint(p: Vec, allowGrid = true): Vec {
-    const anchors = [this.route.start, routeEnd(this.route)];
-    this.snapped = this.snapper.snap(p, allowGrid && this.store.state.snap, anchors);
+    const end = routeEnd(this.route);
+    const anchors = [this.route.start, end];
+    this.snapped = this.snapper.snap(p, allowGrid && this.store.state.snap, anchors, end);
     let out = this.snapped.point;
     if (this.shift && (this.tool === 'line' || this.tool === 'stripes')) {
-      const from = routeEnd(this.route);
-      out = snapAngle(from, this.snapped.kind === 'none' || this.snapped.kind === 'grid' ? p : out);
+      const free = this.snapped.kind === 'none' || this.snapped.kind === 'grid';
+      out = snapAngle(end, free || this.snapped.kind === 'axis' ? p : out);
       this.snapped = { point: out, kind: 'none' };
     }
     return out;
@@ -197,7 +220,7 @@ export class MowScene extends Phaser.Scene {
     this.cursor = { x: pointer.worldX, y: pointer.worldY };
     this.shift = pointer.event?.shiftKey ?? false;
     if (!this.editing) return;
-    if (this.pending?.tool === 'freehand') {
+    if (this.pending?.tool === 'freehand' || this.pending?.tool === 'edge') {
       const last = this.pending.stroke[this.pending.stroke.length - 1];
       if (dist(last, this.cursor) >= 2) this.pending.stroke.push(this.cursor);
     }
@@ -215,6 +238,9 @@ export class MowScene extends Phaser.Scene {
     const end = routeEnd(this.route);
     const raw = { x: pointer.worldX, y: pointer.worldY };
     switch (this.tool) {
+      case 'start':
+        if (isValidStart(this.yard, raw)) this.setStart(raw);
+        break;
       case 'line': {
         const p = this.snapPoint(raw);
         if (dist(p, end) > 2) this.addSegment({ kind: 'line', to: p });
@@ -233,7 +259,8 @@ export class MowScene extends Phaser.Scene {
         break;
       }
       case 'freehand':
-        this.pending = { tool: 'freehand', stroke: [raw] };
+      case 'edge':
+        this.pending = { tool: this.tool, stroke: [raw] };
         break;
       case 'stripes': {
         if (this.pending?.tool !== 'stripes') {
@@ -246,29 +273,26 @@ export class MowScene extends Phaser.Scene {
         }
         break;
       }
-      case 'contour': {
-        const o = this.hoveredObstacle(raw);
-        if (o)
-          this.addSegment({
-            kind: 'polyline',
-            points: [end, ...loopFrom(this.snapper.contourFor(o), end)],
-          });
-        break;
-      }
     }
     this.drawPreview();
   }
 
   private onPointerUp(): void {
-    if (!this.editing || this.pending?.tool !== 'freehand') return;
-    const stroke = this.pending.stroke;
+    if (!this.editing) return;
+    const pending = this.pending;
+    if (pending?.tool !== 'freehand' && pending?.tool !== 'edge') return;
     this.pending = null;
-    const pts = smoothStroke(stroke);
     const end = routeEnd(this.route);
-    // Chain from the route end; skip the stroke's first point if it started right there.
-    const chained = dist(pts[0], end) < 10 ? [end, ...pts.slice(1)] : [end, ...pts];
-    if (chained.length >= 2 && dist(chained[0], chained[chained.length - 1]) + pts.length > 12) {
-      this.addSegment({ kind: 'spline', points: chained });
+    if (pending.tool === 'edge') {
+      const pts = this.snapper.stickyPath(pending.stroke);
+      if (pts.length >= 2) this.addSegment({ kind: 'polyline', points: [end, ...pts] });
+    } else {
+      const pts = smoothStroke(pending.stroke);
+      // Chain from the route end; skip the stroke's first point if it started right there.
+      const chained = dist(pts[0], end) < 10 ? [end, ...pts.slice(1)] : [end, ...pts];
+      if (chained.length >= 2 && dist(chained[0], chained[chained.length - 1]) + pts.length > 12) {
+        this.addSegment({ kind: 'spline', points: chained });
+      }
     }
     this.drawPreview();
   }
@@ -292,14 +316,10 @@ export class MowScene extends Phaser.Scene {
       this.drawPreview();
     } else if (e.key === 'Enter' && this.route.segments.length > 0) {
       this.store.command('mow');
-    } else if (this.editing) {
-      const t = TOOLS.find((t) => t.key === e.key);
+    } else if (this.editing && !ctrl) {
+      const t = TOOLS.find((t) => t.key === e.key.toLowerCase());
       if (t) this.store.set({ tool: t.id });
     }
-  }
-
-  private hoveredObstacle(p: Vec): Obstacle | null {
-    return obstacleAt(this.yard, p, this.mower.deckWidth);
   }
 
   private stripePreview(b: Vec, cursor: Vec): Vec[] {
@@ -314,6 +334,11 @@ export class MowScene extends Phaser.Scene {
 
   private drawStaticYard(overlayLayer: boolean): void {
     const g = this.add.graphics();
+    g.setDepth(overlayLayer ? 50 : 0);
+    if (!overlayLayer) {
+      // Property line: dashed survey line around the customer's lot.
+      dashedLoop(g, this.yard.def.property, 0xffffff, 0.55, 2, 10, 7);
+    }
     for (const o of this.yard.def.obstacles) {
       if (overlayLayer) {
         // Tree canopies are drawn above the route and mower for a bit of depth.
@@ -351,7 +376,17 @@ export class MowScene extends Phaser.Scene {
         }
       }
     }
-    g.setDepth(overlayLayer ? 50 : 0);
+  }
+
+  /** Faint snap guides: the edge lines (half a deck off every obstacle) and their corners. */
+  private drawGuides(): void {
+    const g = this.guideGfx;
+    for (const guide of this.snapper.guides) {
+      g.lineStyle(1, COLORS.guide, 0.18).strokePoints(guide.loop);
+    }
+    for (const c of this.snapper.corners) {
+      g.fillStyle(COLORS.guide, 0.35).fillCircle(c.x, c.y, 2.5);
+    }
   }
 
   private drawRoute(): void {
@@ -360,7 +395,7 @@ export class MowScene extends Phaser.Scene {
     this.swathGfx.clear();
     this.swathRT.clear();
     const start = this.route.start;
-    g.fillStyle(0x4caf50)
+    g.fillStyle(COLORS.startOk)
       .fillCircle(start.x, start.y, 7)
       .lineStyle(2, 0xffffff)
       .strokeCircle(start.x, start.y, 7);
@@ -390,12 +425,23 @@ export class MowScene extends Phaser.Scene {
   private drawPreview(): void {
     const g = this.previewGfx;
     g.clear();
+    this.guideGfx.setVisible(this.editing);
     if (!this.editing) return;
     const end = routeEnd(this.route);
     const deck = this.mower.deckWidth;
     let pts: Vec[] = [];
+    this.snapped = null;
 
     switch (this.tool) {
+      case 'start': {
+        const ok = isValidStart(this.yard, this.cursor);
+        const c = ok ? COLORS.startOk : COLORS.startBad;
+        g.lineStyle(2, c, 1).strokeCircle(this.cursor.x, this.cursor.y, 9);
+        if (!ok) {
+          g.lineBetween(this.cursor.x - 6, this.cursor.y - 6, this.cursor.x + 6, this.cursor.y + 6);
+        }
+        return;
+      }
       case 'line':
         pts = [end, this.snapPoint(this.cursor)];
         break;
@@ -411,8 +457,20 @@ export class MowScene extends Phaser.Scene {
         break;
       case 'freehand':
         if (this.pending?.tool === 'freehand') pts = catmullRom(smoothStroke(this.pending.stroke));
-        this.snapped = null;
         break;
+      case 'edge': {
+        if (this.pending?.tool === 'edge') {
+          pts = [end, ...this.snapper.stickyPath(this.pending.stroke)];
+        } else {
+          // Show which edge the stroke would stick to.
+          const pr = this.snapper.project(this.cursor, DEFAULT_SNAP.edgeRadius);
+          if (pr) {
+            g.lineStyle(2, COLORS.snapEdge, 0.5).strokePoints(this.snapper.guides[pr.guide].loop);
+            this.snapped = { point: pr.point, kind: 'edge' };
+          }
+        }
+        break;
+      }
       case 'stripes':
         pts =
           this.pending?.tool === 'stripes'
@@ -420,26 +478,31 @@ export class MowScene extends Phaser.Scene {
             : [end, this.snapPoint(this.cursor)];
         if (this.pending?.tool === 'stripes') this.snapped = null;
         break;
-      case 'contour': {
-        this.snapped = null;
-        const o = this.hoveredObstacle(this.cursor);
-        if (o) pts = [end, ...loopFrom(this.snapper.contourFor(o), end)];
-        break;
-      }
     }
 
     if (pts.length >= 2) {
       g.lineStyle(deck, COLORS.preview, 0.12).strokePoints(pts);
       g.lineStyle(2, COLORS.preview, 1).strokePoints(pts);
     }
-    if (this.snapped) {
-      const color =
-        this.snapped.kind === 'edge'
-          ? COLORS.snapEdge
-          : this.snapped.kind === 'point'
-            ? COLORS.snapPoint
-            : COLORS.snapGrid;
-      g.fillStyle(color, 1).fillCircle(this.snapped.point.x, this.snapped.point.y, 4);
+    const s = this.snapped;
+    if (s) {
+      const { x, y } = s.point;
+      if (s.kind === 'corner') {
+        g.lineStyle(2, COLORS.snapCorner, 1).strokeRect(x - 6, y - 6, 12, 12);
+        g.fillStyle(COLORS.snapCorner, 1).fillCircle(x, y, 3);
+      } else if (s.kind === 'axis' && s.alignedWith) {
+        const a = s.alignedWith;
+        dashedLine(g, a, s.point, COLORS.snapAxis, 0.9, 1.5, 6, 5);
+        g.fillStyle(COLORS.snapAxis, 1).fillCircle(x, y, 4);
+      } else {
+        const color =
+          s.kind === 'edge'
+            ? COLORS.snapEdge
+            : s.kind === 'point'
+              ? COLORS.snapPoint
+              : COLORS.snapGrid;
+        g.fillStyle(color, 1).fillCircle(x, y, 4);
+      }
     }
   }
 
@@ -511,23 +574,27 @@ export class MowScene extends Phaser.Scene {
   // ---------------------------------------------------------------- persistence
 
   private get storageKey(): string {
-    return `lawnpro.route.${this.yard.def.id}`;
+    return `lawnpro.v2.route.${this.yard.def.id}`;
   }
 
   private saveRoute(): void {
     try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.route.segments));
+      localStorage.setItem(this.storageKey, JSON.stringify(this.route));
     } catch {
       /* storage unavailable: the route just won't survive a refresh */
     }
   }
 
-  private loadRoute(): Segment[] {
+  private loadRoute(): Route {
+    const fallback: Route = { start: this.yard.def.start, segments: [] };
     try {
       const raw = localStorage.getItem(this.storageKey);
-      return raw ? (JSON.parse(raw) as Segment[]) : [];
+      if (!raw) return fallback;
+      const route = JSON.parse(raw) as Route;
+      if (!route.start || !Array.isArray(route.segments)) return fallback;
+      return route;
     } catch {
-      return [];
+      return fallback;
     }
   }
 }
@@ -539,4 +606,38 @@ function closestOnLine(p: Vec, a: Vec, b: Vec): Vec {
   if (l2 === 0) return a;
   const t = ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / l2;
   return { x: a.x + ab.x * t, y: a.y + ab.y * t };
+}
+
+function dashedLine(
+  g: Phaser.GameObjects.Graphics,
+  a: Vec,
+  b: Vec,
+  color: number,
+  alpha: number,
+  width: number,
+  dash: number,
+  gap: number,
+): void {
+  const total = dist(a, b);
+  if (total === 0) return;
+  const d = { x: (b.x - a.x) / total, y: (b.y - a.y) / total };
+  g.lineStyle(width, color, alpha);
+  for (let s = 0; s < total; s += dash + gap) {
+    const e = Math.min(total, s + dash);
+    g.lineBetween(a.x + d.x * s, a.y + d.y * s, a.x + d.x * e, a.y + d.y * e);
+  }
+}
+
+function dashedLoop(
+  g: Phaser.GameObjects.Graphics,
+  pts: Vec[],
+  color: number,
+  alpha: number,
+  width: number,
+  dash: number,
+  gap: number,
+): void {
+  for (let i = 0; i < pts.length; i++) {
+    dashedLine(g, pts[i], pts[(i + 1) % pts.length], color, alpha, width, dash, gap);
+  }
 }
