@@ -48,7 +48,7 @@ export const TOOLS: { id: Tool; label: string; key: string; hint: string }[] = [
 export const PLAYBACK_RATES = [10, 20, 40, 80];
 
 export interface EditorState {
-  yardName: string;
+  yardId: string;
   mowerName: string;
   tool: Tool;
   snap: boolean;
@@ -77,17 +77,25 @@ export class EditorStore {
     for (const l of this.listeners) l(this.state);
   }
 
-  subscribe(l: Listener): void {
+  /** Returns an unsubscribe function. */
+  subscribe(l: Listener): () => void {
     this.listeners.push(l);
     l(this.state);
+    return () => {
+      this.listeners = this.listeners.filter((x) => x !== l);
+    };
   }
 
   command(c: Command): void {
     for (const l of this.commandListeners) l(c);
   }
 
-  onCommand(l: CommandListener): void {
+  /** Returns an unsubscribe function. */
+  onCommand(l: CommandListener): () => void {
     this.commandListeners.push(l);
+    return () => {
+      this.commandListeners = this.commandListeners.filter((x) => x !== l);
+    };
   }
 }
 

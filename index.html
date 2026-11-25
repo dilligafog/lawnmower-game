@@ -22,8 +22,12 @@
         <div id="game"></div>
         <aside id="panel">
           <section>
-            <h2 id="yard-name"></h2>
-            <p class="muted" id="mower-name"></p>
+            <h3>Job</h3>
+            <select id="yard-select" aria-label="Choose a yard"></select>
+            <p class="customer" id="yard-customer"></p>
+            <p><span class="tag" id="yard-challenge"></span></p>
+            <p class="small" id="yard-tip"></p>
+            <p class="muted small" id="mower-name"></p>
           </section>
           <section id="hint-box">
             <p id="hint"></p>
@@ -75,6 +79,8 @@
             <dd id="res-overlap"></dd>
             <dt>Damage</dt>
             <dd id="res-damage"></dd>
+            <dt class="trim-row">Needs trimming</dt>
+            <dd class="trim-row" id="res-trim"></dd>
             <dt>Customer satisfaction</dt>
             <dd id="res-sat"></dd>
           </dl>

@@ -39,12 +39,13 @@ One hardcoded yard (your own yard), one mower, no economy.
 - Contour tool replaced by **Edge**: freehand that sticks to edges and lets go when you pull away. Pinched spots (the inside of a V bed, lot corners) stay uncut on purpose; they're for the trimmer.
 - Surroundings: street, sidewalk, neighbors' lawns in a different shade, a dashed property line. Driving onto a neighbor's lawn counts as an incident.
 
-## Phase 2 — Yard content & challenges
-- Yard data format: JSON, or Tiled map editor export. Fields: size, grass areas, obstacles, start point (driveway/gate), customer info.
-- Obstacle and challenge types: round trees, V-shaped and curved landscape beds (damage penalty), fences and narrow gates (a mower can't get under a fence but grass still grows, so fence lines need edging), slopes (slower), thick or wet grass patches (slower or a second pass needed), toys and hoses (must be avoided), flower beds (high satisfaction penalty), a dog in the yard (moving obstacle, later).
-- Build 6–10 handcrafted yards that teach one challenge each, increasing in difficulty.
+## Phase 2 — Yard content & challenges ✅ (needs playtesting)
+- Yard data format: one JSON file per yard in `src/data/yards/`, auto-loaded. Shapes: `rect`, `polygon`, `ellipse`, `circle`, `line` (fences, hoses). Fields: size, property line, pavement, obstacles, terrain zones, start point, customer, challenge label, tip.
+- Challenges built: trees, mulch beds, **flower beds** (high penalty), **fences and gates** (rigid; a gate narrower than the deck blocks you; the strip along a fence is "needs trimming" and doesn't count against coverage until the trimmer exists), **slopes** (uphill slowest, across fastest), **thick grass** (slower, needs two passes), **toys and hoses** (rigid, running them over is an incident), **odd lot shapes and two streets**.
+- Seven yards, one challenge each: Your Yard, The Patels' Place, Okafor Hill, The Nguyens' Playground, Lindqvist Gardens, The Duffy Rental, The Corner Lot. All are selectable from the Job list for now; Phase 3 adds unlocking.
+- Deferred: wet grass, the dog (moving obstacle).
 
-**Done when:** yards load from data files and each challenge measurably affects score.
+**Done when:** yards load from data files and each challenge measurably affects score. (Covered by `src/sim/challenges.test.ts` and `src/data/yards/yards.test.ts`.)
 
 ## Phase 3 — Business loop & persistence
 - Money, customer satisfaction per client, and an overall **reputation**.

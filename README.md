@@ -16,7 +16,7 @@ See [ROADMAP.md](ROADMAP.md) for the development phases.
 - `src/scenes/`: Phaser scenes and rendering
 - `src/ui/`: DOM toolbar, side panel and results card
 - `src/state/`: editor state shared between the UI and the scene
-- `src/data/yards/`: yard definitions (JSON)
+- `src/data/yards/`: yard definitions, one JSON file per yard (format documented in `loader.ts`)
 
 ## Controls
 

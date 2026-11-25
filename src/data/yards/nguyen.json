@@ -1,0 +1,161 @@
+{
+  "id": "nguyen",
+  "name": "The Nguyens' Playground",
+  "order": 4,
+  "customer": "The Nguyens",
+  "challenge": "Toys & hoses",
+  "tip": "Kids' toys and a garden hose are scattered around the lawn. Running them over upsets the customer, so route around them.",
+  "width": 1120,
+  "height": 820,
+  "cellSize": 4,
+  "start": {
+    "x": 740,
+    "y": 690
+  },
+  "property": {
+    "shape": "rect",
+    "x": 80,
+    "y": 40,
+    "w": 960,
+    "h": 640
+  },
+  "pavement": [
+    {
+      "shape": "rect",
+      "x": 700,
+      "y": 160,
+      "w": 80,
+      "h": 548,
+      "kind": "concrete"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 680,
+      "w": 1120,
+      "h": 28,
+      "kind": "concrete"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 708,
+      "w": 1120,
+      "h": 112,
+      "kind": "asphalt"
+    }
+  ],
+  "obstacles": [
+    {
+      "shape": "rect",
+      "x": 360,
+      "y": 60,
+      "w": 340,
+      "h": 160,
+      "kind": "house"
+    },
+    {
+      "shape": "circle",
+      "x": 220,
+      "y": 330,
+      "r": 9,
+      "kind": "toy"
+    },
+    {
+      "shape": "circle",
+      "x": 540,
+      "y": 470,
+      "r": 9,
+      "kind": "toy"
+    },
+    {
+      "shape": "circle",
+      "x": 870,
+      "y": 380,
+      "r": 9,
+      "kind": "toy"
+    },
+    {
+      "shape": "circle",
+      "x": 300,
+      "y": 600,
+      "r": 9,
+      "kind": "toy"
+    },
+    {
+      "shape": "circle",
+      "x": 960,
+      "y": 610,
+      "r": 9,
+      "kind": "toy"
+    },
+    {
+      "shape": "circle",
+      "x": 620,
+      "y": 300,
+      "r": 9,
+      "kind": "toy"
+    },
+    {
+      "shape": "line",
+      "points": [
+        {
+          "x": 360,
+          "y": 200
+        },
+        {
+          "x": 300,
+          "y": 240
+        },
+        {
+          "x": 240,
+          "y": 300
+        },
+        {
+          "x": 220,
+          "y": 380
+        },
+        {
+          "x": 260,
+          "y": 440
+        },
+        {
+          "x": 340,
+          "y": 460
+        }
+      ],
+      "kind": "hose"
+    },
+    {
+      "shape": "rect",
+      "x": 820,
+      "y": 480,
+      "w": 90,
+      "h": 70,
+      "kind": "bed"
+    },
+    {
+      "shape": "circle",
+      "x": 160,
+      "y": 560,
+      "r": 20,
+      "kind": "tree"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 150,
+      "w": 40,
+      "h": 180,
+      "kind": "house"
+    },
+    {
+      "shape": "rect",
+      "x": 1080,
+      "y": 120,
+      "w": 40,
+      "h": 180,
+      "kind": "house"
+    }
+  ]
+}

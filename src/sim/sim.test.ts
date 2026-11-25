@@ -32,6 +32,11 @@ function emptyYard(width = 256, height = 160, extra: Partial<YardDef> = {}): Yar
   return {
     id: 't',
     name: 'test',
+    order: 0,
+    customer: 'test',
+    challenge: 'test',
+    tip: '',
+    zones: [],
     width,
     height,
     cellSize: 4,
@@ -103,7 +108,7 @@ describe('obstacle contours', () => {
 
   it('traces a V-shaped bed (with a concave notch) at a constant offset', () => {
     const vBed = YARDS.home.obstacles.find(
-      (o) => o.shape === 'polygon' && o.kind === 'bed' && o.points.length === 6,
+      (o) => o.shape === 'polygon' && o.kind === 'flowers' && o.points.length === 6,
     )!;
     for (const p of obstacleContour(vBed, 17)) {
       expect(obstacleDistance(p, vBed)).toBeGreaterThan(16.5);

@@ -18,8 +18,9 @@ import {
 import { scoreSession, simulateJob } from '../sim/score';
 import { MowSession } from '../sim/simulation';
 import { DEFAULT_SNAP, Snapper, type SnapResult, snapAngle } from '../sim/snap';
-import { type Vec, dist, sub, norm } from '../sim/vec';
-import { type Yard, buildYard, isValidStart, type YardDef } from '../sim/yard';
+import { type Vec, dist, sub, norm, pointInPolygon } from '../sim/vec';
+import { type Obstacle, type Yard, buildYard, isValidStart, type YardDef } from '../sim/yard';
+import { ellipsePolygon } from '../sim/shapes';
 
 const COLORS = {
   route: 0xffffff,
@@ -37,6 +38,12 @@ const COLORS = {
   roof: 0x6e4535,
   trunk: 0x5b3a1e,
   canopy: 0x2d5a27,
+  shrub: 0x2e5d32,
+  rock: 0x8d8d8d,
+  fence: 0xb08355,
+  fencePost: 0x7a5530,
+  hose: 0x43a047,
+  toys: [0xe53935, 0x1e88e5, 0xfdd835, 0x8e24aa, 0xfb8c00],
   flowers: [0xf06292, 0xffd54f, 0xba68c8, 0xffffff],
 };
 
@@ -66,7 +73,8 @@ export class MowScene extends Phaser.Scene {
   private past: Route[] = [];
   private future: Route[] = [];
   private pending: Pending = null;
-  private cursor: Vec = { x: 0, y: 0 };
+  /** Off-screen until the pointer enters the map, so no preview is drawn at (0,0). */
+  private cursor: Vec = { x: -1000, y: -1000 };
   private snapped: SnapResult | null = null;
   private shift = false;
 
@@ -84,6 +92,13 @@ export class MowScene extends Phaser.Scene {
   }
 
   init(data: SceneData): void {
+    // Phaser reuses the scene instance on restart, so reset per-yard state here.
+    this.past = [];
+    this.future = [];
+    this.pending = null;
+    this.snapped = null;
+    this.session = null;
+    this.cursor = { x: -1000, y: -1000 };
     this.yard = buildYard(data.yard);
     this.mower = data.mower;
     this.store = data.store;
@@ -110,12 +125,16 @@ export class MowScene extends Phaser.Scene {
     this.input.on('pointermove', this.onPointerMove, this);
     this.input.on('pointerdown', this.onPointerDown, this);
     this.input.on('pointerup', this.onPointerUp, this);
+    this.input.on('gameout', () => {
+      this.cursor = { x: -1000, y: -1000 };
+      this.drawPreview();
+    });
     this.input.keyboard?.on('keydown', this.onKey, this);
     this.input.keyboard?.on('keyup', (e: KeyboardEvent) => {
       if (e.key === 'Shift') this.shift = false;
     });
 
-    this.store.onCommand((c) => {
+    const offCommand = this.store.onCommand((c) => {
       if (c === 'undo') this.undo();
       else if (c === 'redo') this.redo();
       else if (c === 'clear') this.commit({ ...this.route, segments: [] });
@@ -124,7 +143,7 @@ export class MowScene extends Phaser.Scene {
     });
     let lastOverlay = this.store.state.overlay;
     let lastTool = this.store.state.tool;
-    this.store.subscribe((s) => {
+    const offState = this.store.subscribe((s) => {
       if (s.overlay !== lastOverlay) {
         lastOverlay = s.overlay;
         if (this.session) this.lawn.drawAll(this.session, s.overlay);
@@ -134,6 +153,11 @@ export class MowScene extends Phaser.Scene {
         this.pending = null;
         this.drawPreview();
       }
+    });
+
+    this.events.once('shutdown', () => {
+      offCommand();
+      offState();
     });
 
     // A fresh yard starts by choosing where to unload the mower.
@@ -335,44 +359,87 @@ export class MowScene extends Phaser.Scene {
   private drawStaticYard(overlayLayer: boolean): void {
     const g = this.add.graphics();
     g.setDepth(overlayLayer ? 50 : 0);
-    if (!overlayLayer) {
-      // Property line: dashed survey line around the customer's lot.
-      dashedLoop(g, this.yard.def.property, 0xffffff, 0.55, 2, 10, 7);
-    }
-    for (const o of this.yard.def.obstacles) {
-      if (overlayLayer) {
-        // Tree canopies are drawn above the route and mower for a bit of depth.
+    const obstacles = this.yard.def.obstacles;
+    if (overlayLayer) {
+      // Tree canopies are drawn above the route and mower for a bit of depth.
+      for (const o of obstacles) {
         if (o.shape === 'circle' && o.kind === 'tree') {
           g.fillStyle(COLORS.canopy, 0.55).fillCircle(o.x, o.y, o.r * 1.5);
           g.fillStyle(COLORS.canopy, 0.5).fillCircle(o.x - o.r * 0.3, o.y - o.r * 0.3, o.r * 0.9);
         }
-        continue;
       }
+      return;
+    }
+    this.drawZones(g);
+    // Property line: dashed survey line around the customer's lot.
+    dashedLoop(g, this.yard.def.property, 0xffffff, 0.55, 2, 10, 7);
+    // Ground cover first (beds, flowers), then things standing on it.
+    for (const o of obstacles) {
+      if (o.kind === 'bed') {
+        scatter(o, 0.004, (x, y, rnd) => {
+          g.fillStyle(COLORS.shrub, 0.9).fillCircle(x, y, 4 + rnd() * 4);
+        });
+      } else if (o.kind === 'flowers') {
+        scatter(o, 0.09, (x, y, rnd) => {
+          g.fillStyle(COLORS.flowers[Math.floor(rnd() * COLORS.flowers.length)]).fillCircle(
+            x,
+            y,
+            2.5,
+          );
+        });
+      }
+    }
+    obstacles.forEach((o, i) => {
       if (o.shape === 'circle') {
-        g.fillStyle(COLORS.trunk).fillCircle(o.x, o.y, o.r * 0.35);
-      } else if (o.kind === 'house') {
+        if (o.kind === 'tree') g.fillStyle(COLORS.trunk).fillCircle(o.x, o.y, o.r * 0.35);
+        else if (o.kind === 'rock') {
+          g.fillStyle(COLORS.rock).fillCircle(o.x, o.y, o.r);
+          g.fillStyle(0xffffff, 0.18).fillCircle(o.x - o.r * 0.3, o.y - o.r * 0.3, o.r * 0.45);
+        } else if (o.kind === 'toy') {
+          g.fillStyle(COLORS.toys[i % COLORS.toys.length]).fillCircle(o.x, o.y, o.r);
+          g.lineStyle(2, 0xffffff, 0.9).strokeCircle(o.x, o.y, o.r);
+        }
+        return;
+      }
+      if (o.kind === 'house') {
         g.fillStyle(COLORS.house).fillPoints(o.points, true);
         const xs = o.points.map((p) => p.x);
         const ys = o.points.map((p) => p.y);
         const midY = (Math.min(...ys) + Math.max(...ys)) / 2;
         g.lineStyle(3, COLORS.roof).lineBetween(Math.min(...xs), midY, Math.max(...xs), midY);
         g.lineStyle(2, COLORS.roof).strokePoints(o.points, true);
-      } else if (o.kind === 'bed') {
-        // Deterministic flowers scattered inside the bed.
-        const xs = o.points.map((p) => p.x);
-        const ys = o.points.map((p) => p.y);
-        let seed = Math.round(xs[0] * 31 + ys[0]);
-        const rnd = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 0xffffffff;
-        const poly = new Phaser.Geom.Polygon(o.points.map((p) => new Phaser.Geom.Point(p.x, p.y)));
-        for (let i = 0; i < 400; i++) {
-          const x = Math.min(...xs) + rnd() * (Math.max(...xs) - Math.min(...xs));
-          const y = Math.min(...ys) + rnd() * (Math.max(...ys) - Math.min(...ys));
-          if (!poly.contains(x, y)) continue;
-          g.fillStyle(COLORS.flowers[Math.floor(rnd() * COLORS.flowers.length)]).fillCircle(
-            x,
-            y,
-            2.5,
-          );
+      } else if (o.kind === 'fence') {
+        g.fillStyle(COLORS.fence).fillPoints(o.points, true);
+        // Posts every ~24px along the fence line.
+        const line = o.centerline ?? o.points;
+        for (const p of resample(line, 24))
+          g.fillStyle(COLORS.fencePost).fillRect(p.x - 3, p.y - 3, 6, 6);
+      } else if (o.kind === 'hose') {
+        g.fillStyle(COLORS.hose).fillPoints(o.points, true);
+        g.lineStyle(1, 0x1b5e20).strokePoints(o.points, true);
+      } else if (o.kind === 'rock') {
+        g.fillStyle(COLORS.rock).fillPoints(o.points, true);
+      } else if (o.kind === 'toy') {
+        g.fillStyle(COLORS.toys[i % COLORS.toys.length]).fillPoints(o.points, true);
+      }
+    });
+  }
+
+  /** Slopes get downhill chevrons; thick grass is shown by the lawn renderer. */
+  private drawZones(g: Phaser.GameObjects.Graphics): void {
+    for (const z of this.yard.def.zones) {
+      if (z.kind !== 'slope') continue;
+      const xs = z.points.map((p) => p.x);
+      const ys = z.points.map((p) => p.y);
+      const d = z.downhill;
+      const n = { x: -d.y, y: d.x };
+      g.lineStyle(2, 0x000000, 0.18);
+      for (let y = Math.min(...ys) + 40; y < Math.max(...ys); y += 80) {
+        for (let x = Math.min(...xs) + 40; x < Math.max(...xs); x += 80) {
+          if (!pointInPolygon({ x, y }, z.points) || isValidStart(this.yard, { x, y })) continue;
+          const tip = { x: x + d.x * 8, y: y + d.y * 8 };
+          g.lineBetween(tip.x, tip.y, tip.x - d.x * 10 + n.x * 8, tip.y - d.y * 10 + n.y * 8);
+          g.lineBetween(tip.x, tip.y, tip.x - d.x * 10 - n.x * 8, tip.y - d.y * 10 - n.y * 8);
         }
       }
     }
@@ -639,5 +706,28 @@ function dashedLoop(
 ): void {
   for (let i = 0; i < pts.length; i++) {
     dashedLine(g, pts[i], pts[(i + 1) % pts.length], color, alpha, width, dash, gap);
+  }
+}
+
+/** Deterministically scatter decorations inside an obstacle (`density` per px²). */
+function scatter(
+  o: Obstacle,
+  density: number,
+  draw: (x: number, y: number, rnd: () => number) => void,
+): void {
+  const pts = o.shape === 'circle' ? ellipsePolygon(o.x, o.y, o.r, o.r) : o.points;
+  const xs = pts.map((p) => p.x);
+  const ys = pts.map((p) => p.y);
+  const x0 = Math.min(...xs);
+  const y0 = Math.min(...ys);
+  const w = Math.max(...xs) - x0;
+  const h = Math.max(...ys) - y0;
+  let seed = Math.round(x0 * 31 + y0 * 7 + 1);
+  const rnd = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 0xffffffff;
+  const tries = Math.ceil(w * h * density);
+  for (let i = 0; i < tries; i++) {
+    const x = x0 + rnd() * w;
+    const y = y0 + rnd() * h;
+    if (pointInPolygon({ x, y }, pts)) draw(x, y, rnd);
   }
 }

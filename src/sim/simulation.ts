@@ -1,7 +1,7 @@
 import { type MowerSpec } from './mower';
 import { type Route, sampleRoute } from './route';
 import { type Vec, dist, wrapAngle } from './vec';
-import { CELL_GRASS, type HitKind, type Yard, hitTest } from './yard';
+import { CELL_GRASS, type HitKind, type Yard, hitTest, speedFactorAt } from './yard';
 
 export const SAMPLE_SPACING = 2;
 
@@ -24,8 +24,14 @@ export interface Timeline {
  * costs turnTimePerRad, multiplied up to 3x when the turn is tighter than the
  * mower's minimum radius (sharp V corners mean stopping and pivoting). This is
  * what makes long straight stripes the naturally efficient pattern.
+ *
+ * `speedAt` scales driving speed for terrain (slopes, thick grass).
  */
-export function buildTimeline(points: Vec[], mower: MowerSpec): Timeline {
+export function buildTimeline(
+  points: Vec[],
+  mower: MowerSpec,
+  speedAt: (p: Vec, heading: number) => number = () => 1,
+): Timeline {
   const n = points.length;
   const headings: number[] = new Array(n);
   for (let i = 0; i < n; i++) {
@@ -44,7 +50,8 @@ export function buildTimeline(points: Vec[], mower: MowerSpec): Timeline {
     const turn = dTheta * mower.turnTimePerRad * sharpness;
     turnTime += turn;
     d.push(d[i - 1] + ds);
-    times.push(times[i - 1] + ds / mower.topSpeed + turn);
+    const speed = mower.topSpeed * speedAt(points[i], headings[i]);
+    times.push(times[i - 1] + ds / speed + turn);
   }
   return {
     points,
@@ -87,7 +94,9 @@ export class MowSession {
     readonly mower: MowerSpec,
     route: Route,
   ) {
-    this.timeline = buildTimeline(sampleRoute(route, SAMPLE_SPACING), mower);
+    this.timeline = buildTimeline(sampleRoute(route, SAMPLE_SPACING), mower, (p, h) =>
+      speedFactorAt(yard, p, h),
+    );
     const size = yard.cols * yard.rows;
     this.passes = new Uint16Array(size);
     this.shade = new Int8Array(size);
@@ -159,20 +168,23 @@ export class MowSession {
         const idx = row * yard.cols + col;
         if (yard.cells[idx] !== CELL_GRASS) continue;
         const last = this.lastTouch[idx];
+        let changed = false;
         if (last < 0 || s - last > newPassGap) {
-          if (this.passes[idx] === 0) this.cutCount++;
           this.passes[idx]++;
+          if (this.passes[idx] === yard.need[idx]) this.cutCount++;
+          changed = true;
         }
         this.lastTouch[idx] = s;
         if (this.shade[idx] !== shade) {
           this.shade[idx] = shade;
-          this.dirty.push(idx);
+          changed = true;
         }
+        if (changed) this.dirty.push(idx);
       }
     }
 
-    // Damage: the mower body (inner part of the deck) entering an obstacle or the fence.
-    const hit = hitTest(yard, p, mower.deckWidth * 0.3);
+    // Damage: running into an obstacle, a neighbor's lawn or the edge of the map.
+    const hit = hitTest(yard, p, mower.deckWidth);
     if (hit && hit !== this.inHit) {
       this.damage.push({ kind: hit, at: p, time: this.timeline.times[i] });
     }

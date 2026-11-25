@@ -1,0 +1,144 @@
+{
+  "id": "corner",
+  "name": "The Corner Lot",
+  "order": 7,
+  "customer": "The Abernathys",
+  "challenge": "Odd shapes & two streets",
+  "tip": "A corner lot with two streets and an L-shaped yard. Pick the start that keeps your drive short, and stay off the neighbor's side.",
+  "width": 1120,
+  "height": 820,
+  "cellSize": 4,
+  "start": {
+    "x": 380,
+    "y": 690
+  },
+  "property": {
+    "shape": "polygon",
+    "points": [
+      {
+        "x": 80,
+        "y": 40
+      },
+      {
+        "x": 560,
+        "y": 40
+      },
+      {
+        "x": 560,
+        "y": 300
+      },
+      {
+        "x": 972,
+        "y": 300
+      },
+      {
+        "x": 972,
+        "y": 680
+      },
+      {
+        "x": 80,
+        "y": 680
+      }
+    ]
+  },
+  "pavement": [
+    {
+      "shape": "rect",
+      "x": 340,
+      "y": 260,
+      "w": 80,
+      "h": 448,
+      "kind": "concrete"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 680,
+      "w": 1000,
+      "h": 28,
+      "kind": "concrete"
+    },
+    {
+      "shape": "rect",
+      "x": 972,
+      "y": 0,
+      "w": 28,
+      "h": 680,
+      "kind": "concrete"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 708,
+      "w": 1120,
+      "h": 112,
+      "kind": "asphalt"
+    },
+    {
+      "shape": "rect",
+      "x": 1000,
+      "y": 0,
+      "w": 120,
+      "h": 708,
+      "kind": "asphalt"
+    }
+  ],
+  "obstacles": [
+    {
+      "shape": "rect",
+      "x": 160,
+      "y": 100,
+      "w": 260,
+      "h": 160,
+      "kind": "house"
+    },
+    {
+      "shape": "rect",
+      "x": 640,
+      "y": 80,
+      "w": 260,
+      "h": 170,
+      "kind": "house"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 150,
+      "w": 40,
+      "h": 180,
+      "kind": "house"
+    },
+    {
+      "shape": "circle",
+      "x": 760,
+      "y": 480,
+      "r": 24,
+      "kind": "tree"
+    },
+    {
+      "shape": "circle",
+      "x": 200,
+      "y": 520,
+      "r": 20,
+      "kind": "tree"
+    },
+    {
+      "shape": "polygon",
+      "points": [
+        {
+          "x": 880,
+          "y": 680
+        },
+        {
+          "x": 972,
+          "y": 590
+        },
+        {
+          "x": 972,
+          "y": 680
+        }
+      ],
+      "kind": "flowers"
+    }
+  ]
+}

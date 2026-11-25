@@ -47,7 +47,9 @@ export function offsetPolygon(points: Vec[], offset: number, inward = false): Of
     const bis = norm(add(n1, n2));
     const c = dot(bis, n1);
     const miter = add(v, scale(bis, offset / Math.max(0.25, c)));
-    if (c > 0.35) corners.push(miter);
+    // Only real corners (a turn of 20°+) get a snap point; gentle bends in a hose don't.
+    const turn = Math.abs(cross(norm(sub(v, prev)), norm(sub(next, v))));
+    if (c > 0.35 && turn > Math.sin((20 * Math.PI) / 180)) corners.push(miter);
     if (cross(sub(v, prev), sub(next, v)) > 0) {
       const a1 = Math.atan2(n1.y, n1.x);
       let sweep = Math.atan2(n2.y, n2.x) - a1;

@@ -1,0 +1,192 @@
+{
+  "id": "patel",
+  "name": "The Patels' Place",
+  "order": 2,
+  "customer": "The Patels next door",
+  "challenge": "Fences & gates",
+  "tip": "The backyard is fenced in. The left gate fits your mower, the right one doesn't. Grass right along a fence needs a trimmer (coming later), so it won't count against you yet.",
+  "width": 1120,
+  "height": 820,
+  "cellSize": 4,
+  "start": {
+    "x": 680,
+    "y": 690
+  },
+  "property": {
+    "shape": "rect",
+    "x": 80,
+    "y": 40,
+    "w": 960,
+    "h": 640
+  },
+  "pavement": [
+    {
+      "shape": "rect",
+      "x": 640,
+      "y": 360,
+      "w": 80,
+      "h": 348,
+      "kind": "concrete"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 680,
+      "w": 1120,
+      "h": 28,
+      "kind": "concrete"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 708,
+      "w": 1120,
+      "h": 112,
+      "kind": "asphalt"
+    }
+  ],
+  "obstacles": [
+    {
+      "shape": "rect",
+      "x": 400,
+      "y": 220,
+      "w": 320,
+      "h": 140,
+      "kind": "house"
+    },
+    {
+      "shape": "rect",
+      "x": 400,
+      "y": 360,
+      "w": 220,
+      "h": 26,
+      "kind": "bed"
+    },
+    {
+      "shape": "line",
+      "points": [
+        {
+          "x": 84,
+          "y": 300
+        },
+        {
+          "x": 84,
+          "y": 44
+        },
+        {
+          "x": 1036,
+          "y": 44
+        },
+        {
+          "x": 1036,
+          "y": 300
+        }
+      ],
+      "kind": "fence"
+    },
+    {
+      "shape": "line",
+      "points": [
+        {
+          "x": 84,
+          "y": 300
+        },
+        {
+          "x": 200,
+          "y": 300
+        }
+      ],
+      "kind": "fence"
+    },
+    {
+      "shape": "line",
+      "points": [
+        {
+          "x": 248,
+          "y": 300
+        },
+        {
+          "x": 400,
+          "y": 300
+        }
+      ],
+      "kind": "fence"
+    },
+    {
+      "shape": "line",
+      "points": [
+        {
+          "x": 720,
+          "y": 300
+        },
+        {
+          "x": 880,
+          "y": 300
+        }
+      ],
+      "kind": "fence"
+    },
+    {
+      "shape": "line",
+      "points": [
+        {
+          "x": 906,
+          "y": 300
+        },
+        {
+          "x": 1036,
+          "y": 300
+        }
+      ],
+      "kind": "fence"
+    },
+    {
+      "shape": "circle",
+      "x": 240,
+      "y": 520,
+      "r": 24,
+      "kind": "tree"
+    },
+    {
+      "shape": "circle",
+      "x": 880,
+      "y": 150,
+      "r": 22,
+      "kind": "tree"
+    },
+    {
+      "shape": "polygon",
+      "points": [
+        {
+          "x": 100,
+          "y": 60
+        },
+        {
+          "x": 220,
+          "y": 60
+        },
+        {
+          "x": 100,
+          "y": 170
+        }
+      ],
+      "kind": "bed"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 150,
+      "w": 40,
+      "h": 180,
+      "kind": "house"
+    },
+    {
+      "shape": "rect",
+      "x": 1080,
+      "y": 120,
+      "w": 40,
+      "h": 180,
+      "kind": "house"
+    }
+  ]
+}

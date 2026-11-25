@@ -205,3 +205,26 @@ dd {
     border-top: 1px solid var(--border);
   }
 }
+
+select {
+  width: 100%;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font: inherit;
+  margin-bottom: 8px;
+}
+.customer {
+  font-weight: 600;
+}
+.tag {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--accent-text);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}

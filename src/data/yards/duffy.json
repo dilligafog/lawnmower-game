@@ -1,0 +1,141 @@
+{
+  "id": "duffy",
+  "name": "The Duffy Rental",
+  "order": 6,
+  "customer": "Duffy Property Management",
+  "challenge": "Thick grass",
+  "tip": "Nobody has mowed the rental in weeks. Thick patches slow you down and need two passes to cut clean: go over them twice.",
+  "width": 1120,
+  "height": 820,
+  "cellSize": 4,
+  "start": {
+    "x": 840,
+    "y": 690
+  },
+  "property": {
+    "shape": "rect",
+    "x": 80,
+    "y": 40,
+    "w": 960,
+    "h": 640
+  },
+  "pavement": [
+    {
+      "shape": "rect",
+      "x": 800,
+      "y": 120,
+      "w": 80,
+      "h": 588,
+      "kind": "concrete"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 680,
+      "w": 1120,
+      "h": 28,
+      "kind": "concrete"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 708,
+      "w": 1120,
+      "h": 112,
+      "kind": "asphalt"
+    }
+  ],
+  "obstacles": [
+    {
+      "shape": "rect",
+      "x": 520,
+      "y": 60,
+      "w": 280,
+      "h": 150,
+      "kind": "house"
+    },
+    {
+      "shape": "circle",
+      "x": 300,
+      "y": 520,
+      "r": 14,
+      "kind": "rock"
+    },
+    {
+      "shape": "circle",
+      "x": 900,
+      "y": 520,
+      "r": 12,
+      "kind": "rock"
+    },
+    {
+      "shape": "circle",
+      "x": 200,
+      "y": 600,
+      "r": 22,
+      "kind": "tree"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 150,
+      "w": 40,
+      "h": 180,
+      "kind": "house"
+    },
+    {
+      "shape": "rect",
+      "x": 1080,
+      "y": 120,
+      "w": 40,
+      "h": 180,
+      "kind": "house"
+    }
+  ],
+  "zones": [
+    {
+      "shape": "polygon",
+      "points": [
+        {
+          "x": 80,
+          "y": 40
+        },
+        {
+          "x": 500,
+          "y": 40
+        },
+        {
+          "x": 440,
+          "y": 300
+        },
+        {
+          "x": 80,
+          "y": 380
+        }
+      ],
+      "kind": "thick"
+    },
+    {
+      "shape": "polygon",
+      "points": [
+        {
+          "x": 620,
+          "y": 420
+        },
+        {
+          "x": 1040,
+          "y": 360
+        },
+        {
+          "x": 1040,
+          "y": 680
+        },
+        {
+          "x": 680,
+          "y": 680
+        }
+      ],
+      "kind": "thick"
+    }
+  ]
+}

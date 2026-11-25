@@ -1,0 +1,121 @@
+{
+  "id": "lindqvist",
+  "name": "Lindqvist Gardens",
+  "order": 5,
+  "customer": "Mrs. Lindqvist",
+  "challenge": "Flower beds",
+  "tip": "Flower beds everywhere, and every one you clip costs a lot of goodwill. Use Edge to hug them.",
+  "width": 1120,
+  "height": 820,
+  "cellSize": 4,
+  "start": {
+    "x": 800,
+    "y": 690
+  },
+  "property": {
+    "shape": "rect",
+    "x": 80,
+    "y": 40,
+    "w": 960,
+    "h": 640
+  },
+  "pavement": [
+    {
+      "shape": "rect",
+      "x": 760,
+      "y": 140,
+      "w": 80,
+      "h": 568,
+      "kind": "concrete"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 680,
+      "w": 1120,
+      "h": 28,
+      "kind": "concrete"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 708,
+      "w": 1120,
+      "h": 112,
+      "kind": "asphalt"
+    }
+  ],
+  "obstacles": [
+    {
+      "shape": "rect",
+      "x": 380,
+      "y": 60,
+      "w": 380,
+      "h": 170,
+      "kind": "house"
+    },
+    {
+      "shape": "rect",
+      "x": 380,
+      "y": 230,
+      "w": 300,
+      "h": 30,
+      "kind": "flowers"
+    },
+    {
+      "shape": "ellipse",
+      "x": 300,
+      "y": 470,
+      "rx": 120,
+      "ry": 56,
+      "angle": -15,
+      "kind": "flowers"
+    },
+    {
+      "shape": "circle",
+      "x": 940,
+      "y": 400,
+      "r": 18,
+      "kind": "tree"
+    },
+    {
+      "shape": "circle",
+      "x": 940,
+      "y": 400,
+      "r": 52,
+      "kind": "flowers"
+    },
+    {
+      "shape": "ellipse",
+      "x": 600,
+      "y": 580,
+      "rx": 80,
+      "ry": 34,
+      "angle": 20,
+      "kind": "flowers"
+    },
+    {
+      "shape": "circle",
+      "x": 180,
+      "y": 250,
+      "r": 30,
+      "kind": "flowers"
+    },
+    {
+      "shape": "rect",
+      "x": 0,
+      "y": 150,
+      "w": 40,
+      "h": 180,
+      "kind": "house"
+    },
+    {
+      "shape": "rect",
+      "x": 1080,
+      "y": 120,
+      "w": 40,
+      "h": 180,
+      "kind": "house"
+    }
+  ]
+}

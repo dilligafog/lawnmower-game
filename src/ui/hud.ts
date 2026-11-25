@@ -1,6 +1,7 @@
 import { type EditorStore, type Overlay, PLAYBACK_RATES, TOOLS, formatTime } from '../state/editor';
 import { PX_PER_FOOT } from '../sim/mower';
 import type { JobResult } from '../sim/score';
+import { type HitKind, type YardDef, TRIM_BAND } from '../sim/yard';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
@@ -10,12 +11,16 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
 
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
-const HIT_LABELS: Record<string, string> = {
+const HIT_LABELS: Record<HitKind, string> = {
   tree: 'tree',
-  bed: 'flower bed',
+  bed: 'mulch bed',
+  flowers: 'flower bed',
   house: 'house',
   rock: 'rock',
-  fence: 'edge of map',
+  fence: 'fence',
+  toy: 'toy',
+  hose: 'hose',
+  bounds: 'edge of map',
   neighbor: "neighbor's lawn",
 };
 
@@ -30,7 +35,16 @@ function damageSummary(r: JobResult): string {
 }
 
 /** Binds the DOM toolbar/side panel/results modal to the editor store. */
-export function mountHud(store: EditorStore): void {
+export function mountHud(store: EditorStore, yards: YardDef[]): void {
+  const select = $<HTMLSelectElement>('yard-select');
+  for (const y of yards) {
+    const opt = document.createElement('option');
+    opt.value = y.id;
+    opt.textContent = `${y.order}. ${y.name}`;
+    select.appendChild(opt);
+  }
+  select.onchange = () => store.set({ yardId: select.value });
+
   const toolsEl = $('tools');
   const toolButtons = TOOLS.map((t) => {
     const b = document.createElement('button');
@@ -83,8 +97,13 @@ export function mountHud(store: EditorStore): void {
       lastMode = s.mode;
     }
     const editing = s.mode === 'edit';
-    $('yard-name').textContent = s.yardName;
-    $('mower-name').textContent = s.mowerName;
+    const yard = yards.find((y) => y.id === s.yardId)!;
+    select.value = s.yardId;
+    select.disabled = s.mode === 'mowing';
+    $('yard-customer').textContent = yard.customer;
+    $('yard-challenge').textContent = yard.challenge;
+    $('yard-tip').textContent = yard.tip;
+    $('mower-name').textContent = `Mower: ${s.mowerName}`;
 
     TOOLS.forEach((t, i) => {
       toolButtons[i].classList.toggle('active', t.id === s.tool);
@@ -129,6 +148,12 @@ export function mountHud(store: EditorStore): void {
       $('res-eff').textContent = pct(r.efficiency);
       $('res-overlap').textContent = pct(r.overlap);
       $('res-damage').textContent = damageSummary(r);
+      // Rough length of fence line still to trim: trim-strip area / strip width.
+      const trimFt = Math.round((r.edgeCells * yard.cellSize ** 2) / TRIM_BAND / PX_PER_FOOT);
+      $('res-trim').textContent = `${trimFt} ft along fences (trimmer coming soon)`;
+      document.querySelectorAll('.trim-row').forEach((el) => {
+        el.classList.toggle('hidden', r.edgeCells === 0);
+      });
       $('res-sat').textContent = `${Math.round(r.satisfaction)} / 100`;
     }
     overlayButtons.forEach((b) => b.classList.toggle('active', b.dataset.overlay === s.overlay));
